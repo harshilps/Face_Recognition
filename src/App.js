@@ -11,7 +11,7 @@ import Rank from './components/Rank/Rank';
 import './App.css';
 
 const app = new Clarifai.App({
- apiKey: 'Enter Your API key here'
+ apiKey: 'ac404b37cfa24b1886ad133ced3bbaf6'
 });
 
 const particlesOptions = {
@@ -21,17 +21,17 @@ const particlesOptions = {
       density: {
         enable: true,
         value_area: 500,
-    line_linked: {
-      shadow: {
-        enable: true,
-        color: "#3CA9D1",
-        blur: 5
+        line_linked: {
+          shadow: {
+            enable: true,
+            color: "#3CA9D1",
+            blur: 5
+            }
+          }  
+        }
       }
-      }  
+    }
   }
-  }
-}
-}
 class App extends Component {
   constructor() {
     super();
@@ -40,9 +40,28 @@ class App extends Component {
       imageurl: '',
       box: {},
       route: 'signin',
-      isSignedIn: false
+      isSignedIn: false,
+      user: {
+        id: '',
+        name: '',
+        email: '',
+        password: '',
+        entries: 0,
+        joined: ''
+      }
     }
   }
+
+  loadUser = (data) => {
+    this.setState({ user: {
+      id: data.id,
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        entries: data.entries,
+        joined: data.joined
+    }})
+    }
 
 calculateFaceLocation =(data) => {
   const clarifaiFace =  data.outputs[0].data.regions[0].region_info.bounding_box;
@@ -71,9 +90,25 @@ this.setState({input:event.target.value});
     .predict(
       Clarifai.FACE_DETECT_MODEL, 
       this.state.input)
-      .then(response => this.displayFaceBox(this.calculateFaceLocation(response)))
-      .catch(err => console.log(err));
+      .then(response => {
+        if(response) {
+          fetch('http://localhost:3000/image', {
+            method: 'put',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              id: this.state.user.id
+            })
+          })
+          .then(response => response.json())
+          .then(count => {
+            this.setState(Object.assign(this.state.user, {entries: count}))
+          })
+        }
+        this.displayFaceBox(this.calculateFaceLocation(response))
+        .catch(err => console.log(err));  
+      })
 }
+
 onRouteChange= (route) => {
   if (route === 'signout') {
     this.setState({isSignedIn: false})
@@ -104,12 +139,11 @@ onRouteChange= (route) => {
       : (
         this.state.route === 'signin'
         ? <SignIn onRouteChange= {this.onRouteChange}/>
-        : <Register onRouteChange= {this.onRouteChange} />
+        : <Register loadUser={this.loadUser}onRouteChange= {this.onRouteChange} />
         )
       }
       </div>
     );
   }
 }
-
 export default App;
